@@ -1,4 +1,9 @@
-/*********************************************************************
+/*
+**********************************************************************
+Adaptation de la bibliothéque SSD_1306 pour STM32L4xx_HAL.
+author: Laurent Deleris.
+Copyright (c) 2017 Laurent Deleris. All rights reserved.
+**********************************************************************
 This is a library for our Monochrome OLEDs based on SSD1306 drivers
 
   Pick one up today in the adafruit shop!
@@ -18,30 +23,12 @@ All text above, and the splash screen must be included in any redistribution
 #ifndef _Adafruit_SSD1306_H_
 #define _Adafruit_SSD1306_H_
 
-#if ARDUINO >= 100
- #include "Arduino.h"
- #define WIRE_WRITE Wire.write
-#else
- #include "WProgram.h"
-  #define WIRE_WRITE Wire.send
-#endif
+#include <cstdint>
+#include <cstdbool>
+//#include "stm32l4xx_hal.h"
+#include <inttypes.h>
+#include <stdio.h> // for size_t
 
-#if defined(__SAM3X8E__)
- typedef volatile RwReg PortReg;
- typedef uint32_t PortMask;
- #define HAVE_PORTREG
-#elif defined(ARDUINO_ARCH_SAMD)
-// not supported
-#elif defined(ESP8266) || defined(ARDUINO_STM32_FEATHER)
-  typedef volatile uint32_t PortReg;
-  typedef uint32_t PortMask;
-#else
-  typedef volatile uint8_t PortReg;
-  typedef uint8_t PortMask;
- #define HAVE_PORTREG
-#endif
-
-#include <SPI.h>
 #include <Adafruit_GFX.h>
 
 #define BLACK 0
@@ -66,8 +53,8 @@ All text above, and the splash screen must be included in any redistribution
     SSD1306_96_16
 
     -----------------------------------------------------------------------*/
-//   #define SSD1306_128_64
-   #define SSD1306_128_32
+     #define SSD1306_128_64
+//   #define SSD1306_128_32
 //   #define SSD1306_96_16
 /*=========================================================================*/
 
@@ -137,14 +124,17 @@ All text above, and the splash screen must be included in any redistribution
 #define SSD1306_VERTICAL_AND_RIGHT_HORIZONTAL_SCROLL 0x29
 #define SSD1306_VERTICAL_AND_LEFT_HORIZONTAL_SCROLL 0x2A
 
+
 class Adafruit_SSD1306 : public Adafruit_GFX {
  public:
-  Adafruit_SSD1306(int8_t SID, int8_t SCLK, int8_t DC, int8_t RST, int8_t CS);
-  Adafruit_SSD1306(int8_t DC, int8_t RST, int8_t CS);
-  Adafruit_SSD1306(int8_t RST = -1);
+  Adafruit_SSD1306(int8_t SID, int8_t SCLK, int8_t DC, int8_t RST, int8_t CS, uint8_t switchvcc = SSD1306_SWITCHCAPVCC);
+  Adafruit_SSD1306(int8_t DC, int8_t RST, int8_t CS, uint8_t switchvcc = SSD1306_SWITCHCAPVCC);
+  Adafruit_SSD1306(I2C_HandleTypeDef *hi2c, uint8_t i2caddr = SSD1306_I2C_ADDRESS, int8_t RST = -1, uint8_t switchvcc = SSD1306_SWITCHCAPVCC);
+  virtual ~Adafruit_SSD1306(){ if (buffer) free(buffer); };
 
-  void begin(uint8_t switchvcc = SSD1306_SWITCHCAPVCC, uint8_t i2caddr = SSD1306_I2C_ADDRESS, bool reset=true);
+  void begin(void);
   void ssd1306_command(uint8_t c);
+  void affiche_logo(void);
 
   void clearDisplay(void);
   void invertDisplay(uint8_t i);
@@ -157,22 +147,22 @@ class Adafruit_SSD1306 : public Adafruit_GFX {
   void startscrolldiagleft(uint8_t start, uint8_t stop);
   void stopscroll(void);
 
-  void dim(boolean dim);
+  void dim(bool dim);
 
   void drawPixel(int16_t x, int16_t y, uint16_t color);
 
   virtual void drawFastVLine(int16_t x, int16_t y, int16_t h, uint16_t color);
   virtual void drawFastHLine(int16_t x, int16_t y, int16_t w, uint16_t color);
 
+  static uint32_t GetVersion(void);
+
  private:
-  int8_t _i2caddr, _vccstate, sid, sclk, dc, rst, cs;
+  int8_t _vccstate, sid, sclk, dc, rst, cs;
+  uint8_t _i2caddr;
+  I2C_HandleTypeDef *_hi2c;
   void fastSPIwrite(uint8_t c);
 
-  boolean hwSPI;
-#ifdef HAVE_PORTREG
-  PortReg *mosiport, *clkport, *csport, *dcport;
-  PortMask mosipinmask, clkpinmask, cspinmask, dcpinmask;
-#endif
+  bool hwSPI;
 
   inline void drawFastVLineInternal(int16_t x, int16_t y, int16_t h, uint16_t color) __attribute__((always_inline));
   inline void drawFastHLineInternal(int16_t x, int16_t y, int16_t w, uint16_t color) __attribute__((always_inline));
